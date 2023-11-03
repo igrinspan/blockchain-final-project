@@ -1,0 +1,30 @@
+- ¿Qué pasa si un participante tiene más de 2 departamentos? 
+  ¿Su voto vale 1 o #departamentos que tiene?
+
+- ¿Qué pasa si el administrador se duerme/abandona/deja de participar por su cuenta?
+
+- ¿Se podría hacer sin que haya que depender de un tercero (administrador)? 
+   Que los participantes voten para registrar/reemplazar nuevos propietarios.
+
+- Preguntar temas de timestamp (cómo usarlo, vulnerabilidades).
+
+- ¿Cómo contabilizar los votos para ver si una propuesta es aceptada o rechazada? (¿CÓMO SE HACE EN LA VIDA REAL?)
+   ¿Que los votos tengan pesos según la participación/actividad del propietario?
+
+- Costo de desplegar el contrato y de votar, proponer, etc. 
+  Por ej: alguien no quiere votar para no gastar gas.
+  ¿Se podrá dividir todo el costo entre todos los participantes todo el tiempo?
+  ¿Pozo común al iniciar o cada cierta cantidad de tiempo (EXPENSAS)?
+
+- Poner un timeout en las propuestas? Medio que da una noción de prioridad.
+Que las propuestas estén ordenadas por prioridad y que a medida que haya plata sean completadas (FULFILLED).
+
+- ¿Propuestas que se repitan mensual/trimestral/semestralmente? 
+¿Y que se puedan actualizar (por ejemplo si aumenta el precio)?
+
+- Arrepentirse de una propuesta aceptada.
+
+- Posible "ataque" a tener en cuenta: que un participante haya votado en 
+contra de una propuesta que terminó siendo aceptada y por eso se niegue a 
+aportar su parte. (Se puede penalizar quitándole la posibilidad de voto
+o hacer que sí o sí aporte cada cierto tiempo o no sé).
