@@ -28,3 +28,5 @@ Que las propuestas estén ordenadas por prioridad y que a medida que haya plata 
 contra de una propuesta que terminó siendo aceptada y por eso se niegue a 
 aportar su parte. (Se puede penalizar quitándole la posibilidad de voto
 o hacer que sí o sí aporte cada cierto tiempo o no sé).
+
+- Idea bolsa de trabajo.
