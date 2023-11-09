@@ -6,7 +6,8 @@ pragma solidity >=0.8.0 <0.9.0;
 
 contract Consorcio {
 
-    mapping(address => bool) landlordsRegistered;
+    address[] landlordsAddresses;
+    mapping(address => uint) landlordsIndexes; // used for checking if eddress is landlord and for replacing landlords
     address owner = msg.sender;
     mapping(uint => Proposal) public proposals;
     uint nextProposalId = 0;
@@ -21,10 +22,6 @@ contract Consorcio {
     enum ProposalState { CREATED, ACCEPTED, DECLINED, EXPIRED, FULFILLED }
     enum VotesState { PENDING, POSITIVE, NEGATIVE }
 
-    struct Vote {
-        address landlordAddress;
-        VotesState state;
-    }
 
     struct Proposal {
         uint id;
@@ -34,7 +31,9 @@ contract Consorcio {
         uint timestamp;
         uint timeout;
         ProposalState state;
-        Vote[] votes;
+        uint positiveVotes;
+        uint negativeVotes;
+        mapping(address => VotesState) votes;
     }
     
     event ProposalAccepted(uint proposalId);
@@ -48,7 +47,7 @@ contract Consorcio {
     }
 
     modifier isRegistered {
-        require(landlordsRegistered[msg.sender], "Landlord is not registered");
+        require(0 < landlordsIndexes[msg.sender], "Landlord is not registered");
         _;
     }
     modifier hasCREATEDState(uint proposalId) {
@@ -68,32 +67,46 @@ contract Consorcio {
         require(landlord != address(0));
 
         // require landlord is not already registered
-        require(!landlordsRegistered[landlord]);
+        require(landlordsIndexes[landlord] == 0);
 
         // require there are less than totalNumberOfParticipants landlords registered
         require(numberOfParticipants < totalNumberOfParticipants);
 
-        landlordsRegistered[landlord] = true;
         numberOfParticipants++;
+        landlordsIndexes[landlord] = numberOfParticipants;
+        landlordsAddresses.push(landlord);
     }
 
     function replaceLandlord(address previousLandlord, address newLandlord) public {
         require(msg.sender == previousLandlord);
 
-        landlordsRegistered[previousLandlord] = false;
-        landlordsRegistered[newLandlord] = true;
+
+        landlordsAddresses[landlordsIndexes[previousLandlord] - 1] = newLandlord;
+
+        landlordsIndexes[newLandlord] = landlordsIndexes[previousLandlord];
+        landlordsIndexes[previousLandlord] = 0;
     }
 
 
     function createProposal(string memory description, uint costPerPerson, uint timeout) public isRegistered {
         require(bytes(description).length != 0 && costPerPerson != 0 && timeout != 0, "All parameters must be not null");
 
-        // create empty votes array
-        Vote[] memory votes;
-
-        Proposal memory proposal = Proposal(nextProposalId, msg.sender, description, costPerPerson, block.timestamp, timeout, ProposalState.CREATED, votes);
-        proposals[nextProposalId] = proposal;
+        constructProposal(nextProposalId, msg.sender, description, costPerPerson, block.timestamp, timeout);
         nextProposalId = nextProposalId + 1;
+    }
+
+    function constructProposal(uint id, address creator, string memory description, uint costPerPerson, uint timestamp, uint timeout) internal{
+        Proposal storage p = proposals[nextProposalId];
+        p.id = id;
+        p.creator = creator;
+        p.description = description;
+        p.costPerPerson = costPerPerson;
+        p.timestamp = timestamp;
+        p.timeout = timeout;
+        p.state = ProposalState.CREATED;
+        p.positiveVotes = 0;
+        p.negativeVotes = 0;
+
     }
 
     function removeProposal(uint proposalId) public isRegistered hasCREATEDState(proposalId){
@@ -125,17 +138,12 @@ contract Consorcio {
         }
 
         proposal.timestamp = block.timestamp;
-        proposal.votes = new Vote[](0);
+        for (uint i = 0; i < landlordsAddresses.length; i++){
+            address addr = landlordsAddresses[i];
+            delete proposal.votes[addr];
+        }
     }
 
-    
-
-    function seeProposal(uint proposalId) public view returns(Proposal memory){
-        // require proposalId is a key in proposals
-        require(proposals[proposalId].id == proposalId, "Proposal does not exist");
-
-        return proposals[proposalId];
-    }
 
     function vote(uint proposalId, bool decision) public isRegistered {
         // require proposalId is a key in proposals
@@ -145,16 +153,9 @@ contract Consorcio {
         require(proposals[proposalId].state == ProposalState.CREATED, "Proposal must be in CREATED state to be voted");
 
         // require msg.sender has not voted yet
-        for (uint i = 0; i < proposals[proposalId].votes.length; i++){
-            require(proposals[proposalId].votes[i].landlordAddress != msg.sender, "Landlord has already voted");
-        }
+        require(proposals[proposalId].votes[msg.sender] == VotesState.PENDING);
 
-        Proposal storage proposal = proposals[proposalId]; // storage te lo pasa por referencia.
-        // add vote to proposal votes
-        Vote memory vote = Vote(msg.sender, decision ? VotesState.POSITIVE : VotesState.NEGATIVE);
-        proposal.votes.push(vote);
-
-        updateProposalStateBasedOnVote(proposal);
+        updateProposalStateBasedOnVote(proposalId, msg.sender, decision);
     }
 
     function editVote(uint proposalId, bool decision) public isRegistered {
@@ -165,45 +166,31 @@ contract Consorcio {
         require(proposals[proposalId].state == ProposalState.CREATED, "Proposal must be in CREATED state to be voted");
 
         // require msg.sender has voted yet
-        bool hasVoted = false;
-        for (uint i = 0; i < proposals[proposalId].votes.length; i++){
-            if (proposals[proposalId].votes[i].landlordAddress == msg.sender){
-                hasVoted = true;
-                break;
-            }
-        }
-        require(hasVoted, "Landlord has not voted yet");
-
-        Proposal storage proposal = proposals[proposalId]; // storage te lo pasa por referencia.
-        Vote memory vote = Vote(msg.sender, decision ? VotesState.POSITIVE : VotesState.NEGATIVE);
-        proposal.votes.push(vote);
-        updateProposalStateBasedOnVote(proposal);
-
-
-    }
-
-    function updateProposalStateBasedOnVote(Proposal storage proposal) internal {
-        uint positiveVotes = 0;
-        uint negativeVotes = 0;
-
-        for (uint i = 0; i < proposal.votes.length; i++){
-            if (proposal.votes[i].state == VotesState.POSITIVE){
-                positiveVotes++;
-            }
-            else {
-                negativeVotes++;
-            }
-        }
+        require(proposals[proposalId].votes[msg.sender] != VotesState.PENDING, "Landlord has not voted yet");
 
         
-        if (majority <= positiveVotes){
+        updateProposalStateBasedOnVote(proposalId, msg.sender, decision);
+    }
+
+    function updateProposalStateBasedOnVote(uint proposalId, address addr, bool decision) internal {
+        
+        Proposal storage proposal = proposals[proposalId];
+        // add vote to proposal votes
+        proposal.votes[addr] = decision ? VotesState.POSITIVE : VotesState.NEGATIVE;
+        if (decision){
+            proposal.positiveVotes++;
+        }else{
+            proposal.negativeVotes--;
+        }
+        
+        if (majority <= proposal.positiveVotes){
             proposal.state = ProposalState.ACCEPTED;
             emit ProposalAccepted(proposal.id);
             addToPriorityQueue(proposal);
             tryToFulfillProposal(proposal);
         }
 
-        if (majority <= negativeVotes){
+        if (majority <= proposal.negativeVotes){
             proposal.state = ProposalState.DECLINED;
             removeProposal(proposal.id);
         }
@@ -228,6 +215,16 @@ contract Consorcio {
 
     function tryToFulfillProposal(Proposal storage proposal) internal {
 
+    }
+
+
+    // --- View functions ---
+
+    function seeProposal(uint proposalId) public view returns(uint id){
+        // require proposalId is a key in proposals
+        require(proposals[proposalId].id == proposalId, "Proposal does not exist");
+
+        return proposalId;
     }
 
 }
