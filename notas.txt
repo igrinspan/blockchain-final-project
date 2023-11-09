@@ -1,10 +1,10 @@
 - ¿Qué pasa si un participante tiene más de 2 departamentos? 
   ¿Su voto vale 1 o #departamentos que tiene?
 
-- ¿Qué pasa si el administrador se duerme/abandona/deja de participar por su cuenta?
-
-- ¿Se podría hacer sin que haya que depender de un tercero (administrador)? 
-   Que los participantes voten para registrar/reemplazar nuevos propietarios.
+- ¿Qué pasa si el administrador se duerme/abandona/deja de participar por su cuenta? 
+  ¿Se podría hacer sin que haya que depender de un tercero (administrador)? 
+  -> Que cualquier participante pueda proponer agregar un propietario, y se necesiten 3 votos para
+    que el nuevo propietario sea aceptado y registrado. Lo mismo para reemplazar.
 
 - Preguntar temas de timestamp (cómo usarlo, vulnerabilidades).
 
@@ -15,9 +15,6 @@
   Por ej: alguien no quiere votar para no gastar gas.
   ¿Se podrá dividir todo el costo entre todos los participantes todo el tiempo?
   ¿Pozo común al iniciar o cada cierta cantidad de tiempo (EXPENSAS)?
-
-- Poner un timeout en las propuestas? Medio que da una noción de prioridad.
-Que las propuestas estén ordenadas por prioridad y que a medida que haya plata sean completadas (FULFILLED).
 
 - ¿Propuestas que se repitan mensual/trimestral/semestralmente? 
 ¿Y que se puedan actualizar (por ejemplo si aumenta el precio)?
@@ -30,3 +27,16 @@ aportar su parte. (Se puede penalizar quitándole la posibilidad de voto
 o hacer que sí o sí aporte cada cierto tiempo o no sé).
 
 - Idea bolsa de trabajo.
+
+
+- Que el owner en vez de funcionar como un adminnistrador funcione más como la constructora del edificio.
+O sea, que cree el contrato y agregue a los primeros n participantes (n = #departamentos) y después no
+tenga más incidencia en el contrato. Los demás cambios/reemplazos de propietarios se hacen por medio 
+de los participantes y sin intermediario.
+
+
+
+------ Listo ------
+
+- ¿Poner un timeout en las propuestas? Medio que da una noción de prioridad.
+Que las propuestas estén ordenadas por prioridad y que a medida que haya plata sean completadas (FULFILLED).
