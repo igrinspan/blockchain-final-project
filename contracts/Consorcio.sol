@@ -6,13 +6,13 @@ pragma solidity >=0.8.0 <0.9.0;
 
 contract Consorcio {
 
-    address[] landlordsAddresses;
-    mapping(address => uint) landlordsIndexes; // used for checking if eddress is landlord and for replacing landlords
+    address[] public landlordsAddresses;
+    mapping(address => uint) public landlordsIndexes; // used for checking if eddress is landlord and for replacing landlords
     address owner = msg.sender;
     mapping(uint => Proposal) public proposals;
-    uint nextProposalId = 0;
+    uint nextProposalId = 1; // TODO: charlar. Puse esto porque sino habia una propuesta con id 0 y no se podia diferenciar de una propuesta que no existia en la funcion vote.
     uint numberOfParticipants = 0;
-    uint totalNumberOfParticipants;
+    uint public totalNumberOfParticipants;
     uint majority;
     mapping(address => uint) pool;
     PriorityQueue acceptedProposals;
@@ -42,12 +42,12 @@ contract Consorcio {
     event Deposit(address landlord, uint amount);
 
     modifier onlyOwner {
-        require(msg.sender == owner, "Only owner can call this function");
+        require(msg.sender == owner, "Only the owner can call this function");
         _;
     }
 
     modifier isRegistered {
-        require(0 < landlordsIndexes[msg.sender], "Landlord is not registered");
+        require(0 < landlordsIndexes[msg.sender], "Only registered landlords can call this function");
         _;
     }
     modifier hasCREATEDState(uint proposalId) {
@@ -67,10 +67,10 @@ contract Consorcio {
         require(landlord != address(0));
 
         // require landlord is not already registered
-        require(landlordsIndexes[landlord] == 0);
+        require(landlordsIndexes[landlord] == 0, "Landlord is already registered");
 
         // require there are less than totalNumberOfParticipants landlords registered
-        require(numberOfParticipants < totalNumberOfParticipants);
+        require(numberOfParticipants < totalNumberOfParticipants, "There are already enough landlords registered");
 
         numberOfParticipants++;
         landlordsIndexes[landlord] = numberOfParticipants;
@@ -78,7 +78,7 @@ contract Consorcio {
     }
 
     function replaceLandlord(address previousLandlord, address newLandlord) public {
-        require(msg.sender == previousLandlord);
+        require(msg.sender == previousLandlord, "Only the landlord to be replaced can call this function");
 
 
         landlordsAddresses[landlordsIndexes[previousLandlord] - 1] = newLandlord;
@@ -87,7 +87,7 @@ contract Consorcio {
         landlordsIndexes[previousLandlord] = 0;
     }
 
-
+    // TODO: estaria bueno que esta funcion devuelva el id de la propuesta creada, ¿no? (ian)
     function createProposal(string memory description, uint costPerPerson, uint timeout) public isRegistered {
         require(bytes(description).length != 0 && costPerPerson != 0 && timeout != 0, "All parameters must be not null");
 
@@ -147,13 +147,13 @@ contract Consorcio {
 
     function vote(uint proposalId, bool decision) public isRegistered {
         // require proposalId is a key in proposals
-        require(proposals[proposalId].id == proposalId, "Proposal does not exist");
+        require(proposalId > 0 && proposals[proposalId].id == proposalId, "Proposal does not exist");
 
         // require proposal is in CREATED state
         require(proposals[proposalId].state == ProposalState.CREATED, "Proposal must be in CREATED state to be voted");
 
         // require msg.sender has not voted yet
-        require(proposals[proposalId].votes[msg.sender] == VotesState.PENDING);
+        require(proposals[proposalId].votes[msg.sender] == VotesState.PENDING, "Landlord has already voted that proposal");
 
         updateProposalStateBasedOnVote(proposalId, msg.sender, decision);
     }
