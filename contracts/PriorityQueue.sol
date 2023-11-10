@@ -18,7 +18,7 @@ contract PriorityQueue {
   event EntryAdded(uint head, uint id, uint timeout);
   event EntryRemover(uint head, uint id);
 
-  function findPreviousAndCurrent(uint _id, uint _timeout) public view returns(uint, uint){
+  function findPreviousAndCurrent(uint _id, uint _timeout) private view returns(uint, uint){
     uint currentNodeId = head;
     uint previousNodeId = 0;
 
@@ -37,7 +37,7 @@ contract PriorityQueue {
     return(previousNodeId, currentNodeId);
   }
 
-  function addEntry(uint _id, uint _timeout) public {
+  function addEntry(uint _id, uint _timeout) external {
     
     // Recorrer la lista fijandose los timeouts y meter el nodo cuando encontremos una de menor prioridad.
     (uint previousNodeId, uint tempNodeId) = findPreviousAndCurrent(_id, _timeout);
@@ -54,7 +54,7 @@ contract PriorityQueue {
     emit EntryAdded(head, _id, _timeout);
   }
 
-  function removeEntry(uint _id) public {
+  function removeEntry(uint _id) external {
     require(nodes[_id].id == _id, "Node is not in queue");
     
     (uint previousNodeId, uint tempNodeId) = findPreviousAndCurrent(_id, nodes[_id].timeout);
@@ -71,11 +71,11 @@ contract PriorityQueue {
   }
 
   //needed for external contract access to struct
-  function getEntry(uint _id) public view returns (uint,uint){
+  function getEntry(uint _id) external view returns (uint,uint){
     return (nodes[_id].next, nodes[_id].timeout);
   }
 
-  function getFirstId() public view returns(uint){
+  function getFirstId() external view returns(uint){
     return head;
   }
 
