@@ -79,5 +79,34 @@ contract PriorityQueue {
     return head;
   }
 
+  function getMonth(uint256 timestamp) internal pure returns (uint256 month) {
+    }
+
+
+
+  function getNextMonthProposalsIDs(uint nextMonth) private view returns(uint[] memory){
+      uint currentNodeId = head;
+      uint numberOfNextMonthProposalsIDs = 0;
+      while(currentNodeId != 0){
+        Node storage tempNode = nodes[currentNodeId];
+        if (nextMonth < getMonth(tempNode.timeout)){
+            // Insert logic here
+            break;
+        }
+        numberOfNextMonthProposalsIDs++;
+        currentNodeId = nodes[currentNodeId].next; 
+      }
+
+      currentNodeId = head;
+      uint[] memory proposalsIDs = new uint[](numberOfNextMonthProposalsIDs);
+
+      for (uint i = 0; i < numberOfNextMonthProposalsIDs; i++){
+        proposalsIDs[i] = currentNodeId;
+        currentNodeId = nodes[currentNodeId].next; 
+      }
+
+      return proposalsIDs; 
+  }
+
 
 }

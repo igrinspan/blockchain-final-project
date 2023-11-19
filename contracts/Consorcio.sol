@@ -6,22 +6,32 @@ pragma solidity >=0.8.0 <0.9.0;
 
 contract Consorcio {
 
+    address owner = msg.sender;
+    uint public initialDeposit;
+
     address[] public landlordsAddresses;
     mapping(address => uint) public landlordsIndexes; // used for checking if eddress is landlord and for replacing landlords
-    address owner = msg.sender;
-    mapping(uint => Proposal) public proposals;
-    uint nextProposalId = 1; // TODO: charlar. Puse esto porque sino habia una propuesta con id 0 y no se podia diferenciar de una propuesta que no existia en la funcion vote.
+    mapping(address => bool) public invitedLandlords;
+
     uint numberOfParticipants = 0;
     uint public totalNumberOfParticipants;
     uint majority;
     mapping(address => uint) pool;
-    PriorityQueue acceptedProposals;
+    NextMonthExpenses public nextMonthExpenses;
 
+    uint nextProposalId = 1; // TODO: charlar. Puse esto porque sino habia una propuesta con id 0 y no se podia diferenciar de una propuesta que no existia en la funcion vote.
+    mapping(uint => Proposal) public proposals;
+    PriorityQueue acceptedProposals;
     uint[] proposalsPriority; // La prioridad esta determinada por el timeout.
 
     enum ProposalState { CREATED, ACCEPTED, DECLINED, EXPIRED, FULFILLED }
     enum VotesState { PENDING, POSITIVE, NEGATIVE }
 
+    struct NextMonthExpenses {
+        uint month;
+        uint value;
+        mapping(address => bool) participantHasPaid;
+    }
 
     struct Proposal {
         uint id;
@@ -50,6 +60,12 @@ contract Consorcio {
         require(0 < landlordsIndexes[msg.sender], "Only registered landlords can call this function");
         _;
     }
+
+    modifier isInvited {
+        require(invitedLandlords[msg.sender], "Only invited landlords can call this function");
+        _;
+    }
+
     modifier hasCREATEDState(uint proposalId) {
         require(proposals[proposalId].state == ProposalState.CREATED, "Proposal must be in CREATED state to be edited");
         _;
@@ -57,39 +73,86 @@ contract Consorcio {
 
 
 
-    constructor(uint _totalNumberOfParticipants){
+    constructor(uint _totalNumberOfParticipants, uint _initialDeposit){
         totalNumberOfParticipants = _totalNumberOfParticipants;
         majority = _totalNumberOfParticipants / 2 + 1;
+        initialDeposit = _initialDeposit;
     }
 
-    function registerLandlord(address landlord) public onlyOwner{
-        // require landlord address is a valid address
-        require(landlord != address(0));
 
-        // require landlord is not already registered
-        require(landlordsIndexes[landlord] == 0, "Landlord is already registered");
-
-        // require there are less than totalNumberOfParticipants landlords registered
+    function inviteLandlord(address landlord) public onlyOwner{
+        require(landlord != address(0), "Invalid address");
+        require(invitedLandlords[landlord] == false, "Landlord is already invited");
         require(numberOfParticipants < totalNumberOfParticipants, "There are already enough landlords registered");
 
-        numberOfParticipants++;
-        landlordsIndexes[landlord] = numberOfParticipants;
-        landlordsAddresses.push(landlord);
+        invitedLandlords[landlord] = true;
     }
+
+    function payInitialDepositAndRegister() external payable isInvited {
+        require(msg.value == initialDeposit, "Ether sent does not match initial deposit amount");
+        require(landlordsIndexes[msg.sender] == 0, "Landlord is already registered"); 
+        
+        numberOfParticipants++;
+        landlordsIndexes[msg.sender] = numberOfParticipants;
+        landlordsAddresses.push(msg.sender);   
+    }
+
 
     function replaceLandlord(address previousLandlord, address newLandlord) public {
         require(msg.sender == previousLandlord, "Only the landlord to be replaced can call this function");
 
-
         landlordsAddresses[landlordsIndexes[previousLandlord] - 1] = newLandlord;
-
         landlordsIndexes[newLandlord] = landlordsIndexes[previousLandlord];
         landlordsIndexes[previousLandlord] = 0;
     }
 
+    function payNextMonthExpenses() isRegistered external payable  {
+        
+        require((getMonth(block.timestamp) + 1) % 12 == nextMonthExpenses.month, "You must pay next month's expenses");
+        require(msg.value == nextMonthExpenses.value, "You must pay the correct amount of money for next month's expenses");
+        require(nextMonthExpenses.participantHasPaid[msg.sender] == false);
+
+        nextMonthExpenses.participantHasPaid[msg.sender] = true;
+    
+    }
+
+    function addDays(uint256 timestamp, uint256 _days) public pure returns (uint256 newTimestamp) {}
+    function getMonth(uint256 timestamp) internal pure returns (uint256 month) {}
+
+    function timestampToDateTime(uint256 timestamp)
+        public
+        pure
+        returns (uint256 year, uint256 month, uint256 day, uint256 hour, uint256 minute, uint256 second)
+    {}
+
+    function calculateNextMonthExpenses() isRegistered external view returns(uint256){
+        // Cuando se llame la funcion, tiene que ser el ultimo dia del mes.
+        (, , uint256 nextDay, , , ) = timestampToDateTime(addDays(block.timestamp, 1));
+        require(nextDay == 1);
+        // La primera vez que se llame a la funcion en un mes particular, se debera calcular cuanto debe pagar cada uno el siguiente mes.
+        uint nextMonth = getMonth(block.timestamp) + 1;
+        if (nextMonthExpenses.month < nextMonth){
+            uint[] memory nextMonthProposalsIDs = acceptedProposals.getNextMonthProposalsIDs(nextMonth);
+            uint totalCostPerPerson = 0;
+            // calculate total value for next months
+            for (uint i=0; i < nextMonthProposalsIDs.length; i++) {
+                totalCostPerPerson += proposals[nextMonthProposalsIDs[i]].costPerPerson;
+            }
+            nextMonthExpenses.month = nextMonth;
+            nextMonthExpenses.value = totalCostPerPerson;
+
+            for (uint i = 0; i < landlordsAddresses.length; i++){ // update landlords next month's expenses
+                nextMonthExpenses.participantHasPaid[landlordsAddresses[i]] = false;
+            }
+        }
+        return nextMonthExpenses.value;
+    }
+
+
     // TODO: estaria bueno que esta funcion devuelva el id de la propuesta creada, ¿no? (ian)
     function createProposal(string memory description, uint costPerPerson, uint timeout) public isRegistered {
         require(bytes(description).length != 0 && costPerPerson != 0 && timeout != 0, "All parameters must be not null");
+        require(block.timestamp < timeout);
 
         constructProposal(nextProposalId, msg.sender, description, costPerPerson, block.timestamp, timeout);
         nextProposalId = nextProposalId + 1;
@@ -133,7 +196,7 @@ contract Consorcio {
         if (costPerPerson != 0){
             proposal.costPerPerson = costPerPerson;
         }
-        if (timeout != 0){
+        if (timeout != 0 && block.timestamp < timeout){
             proposal.timeout = timeout;
         }
 
@@ -168,6 +231,10 @@ contract Consorcio {
         // require msg.sender has voted yet
         require(proposals[proposalId].votes[msg.sender] != VotesState.PENDING, "Landlord has not voted yet");
 
+        // require decision is not the same as before (i.e. voter is changing his vote)
+        require(proposals[proposalId].votes[msg.sender] == VotesState.POSITIVE && !decision || 
+        proposals[proposalId].votes[msg.sender] == VotesState.NEGATIVE && decision, "Vote cannot be the same");
+
         
         updateProposalStateBasedOnVote(proposalId, msg.sender, decision);
     }
@@ -177,10 +244,12 @@ contract Consorcio {
         Proposal storage proposal = proposals[proposalId];
         // add vote to proposal votes
         proposal.votes[addr] = decision ? VotesState.POSITIVE : VotesState.NEGATIVE;
-        if (decision){
+        if (decision){ // TODO : reportar error gracias a fuzzing
             proposal.positiveVotes++;
-        }else{
             proposal.negativeVotes--;
+        }else{
+            proposal.positiveVotes--;
+            proposal.negativeVotes++;
         }
         
         if (majority <= proposal.positiveVotes){
@@ -196,18 +265,15 @@ contract Consorcio {
         }
     }
 
-    function deposit() public payable isRegistered {
-        // Actualizamos el valor de su cuenta.
-        pool[msg.sender] += msg.value;
-        emit Deposit(msg.sender, msg.value);
-
-        // get 1rst priority proposal cost
-        acceptedProposals.getFirstId();
-        // check if all landlords have enough money to pay
-        // if so, substract the same quantiy from all of them
-        // and update proposals
-        // else error message 
-    }
+    // TODO: el primero de cada mes se llama a la funcion que intenta cumplir todas las propuestas de este mes que empieza. 
+    // check which participant hasn't paid (looking into nextMonthExpenses.participantHasPaid). Notify to the others (emit event) and discount the debt from the deposit.
+    // para cada propueta con prioridad mayor que pueda ser cumplida,
+    // - emite un evento
+    // - ACCEPTED -> FULFILLED
+    // para las demas, que no puedan ser cumplidas:
+    // - emite un evento
+    // - ACCEPTED -> EXPIRED
+    
 
     function addToPriorityQueue(Proposal storage proposal) internal {
         acceptedProposals.addEntry(proposal.id, proposal.timeout);
