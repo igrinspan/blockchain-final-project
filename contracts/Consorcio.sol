@@ -33,7 +33,7 @@ contract Consorcio {
         mapping(address => bool) landlordHasPaid;
     }
 
-    // TODO: agregar landlordsDeposits []
+    // TODO: agregar landlordsDeposits {landlord:deposits}
 
     struct Proposal {
         uint id;
@@ -99,14 +99,16 @@ contract Consorcio {
         landlordsAddresses.push(msg.sender);   
     }
 
-
-    function replaceLandlord(address previousLandlord, address newLandlord) public { // TODO: retornar depósito inicial y modificar invitedLandlords en lugar de landlordsAddresses
+    // TODO: eliminar previousLandlord de landlordsIndexes y agregar newLandlord a invitedLandlords en lugar de landlordsAddresses
+    function replaceLandlord(address previousLandlord, address newLandlord) public { 
         require(msg.sender == previousLandlord, "Only the landlord to be replaced can call this function");
 
         landlordsAddresses[landlordsIndexes[previousLandlord] - 1] = newLandlord;
         landlordsIndexes[newLandlord] = landlordsIndexes[previousLandlord];
         landlordsIndexes[previousLandlord] = 0;
     }
+
+    // TODO: agregar funcion que retorna depósito inicial si landLord ya no está en landlordsIndexes
 
     function payNextMonthExpenses() isRegistered external payable  { 
         
