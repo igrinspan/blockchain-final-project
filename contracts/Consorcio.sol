@@ -33,7 +33,8 @@ contract Consorcio {
         mapping(address => bool) landlordHasPaid;
     }
 
-    // TODO: agregar landlordsDeposits {landlord:deposits}
+    mapping(address => uint) landlordsDeposits;
+
 
     struct Proposal {
         uint id;
@@ -73,6 +74,14 @@ contract Consorcio {
         _;
     }
 
+    modifier hasNoDebt(uint proposalId) {
+        require(landlordsDeposits[msg.sender] == initialDeposit, "You must pay your deposit debt");
+        _;
+    }
+
+
+    
+
 
 
     constructor(uint _totalNumberOfLandlords, uint _initialDeposit){
@@ -90,25 +99,45 @@ contract Consorcio {
         invitedLandlords[landlord] = true;
     }
 
-    function payInitialDepositAndRegister() external payable isInvited { // TODO: modificar landlordsDeposits
+    function payInitialDepositAndRegister() external payable isInvited {
         require(msg.value == initialDeposit, "Ether sent does not match initial deposit amount");
         require(landlordsIndexes[msg.sender] == 0, "Landlord is already registered"); 
         
+
         numberOfLandlords++;
         landlordsIndexes[msg.sender] = numberOfLandlords;
+        landlordsDeposits[msg.sender] = msg.value;
         landlordsAddresses.push(msg.sender);   
     }
 
-    // TODO: eliminar previousLandlord de landlordsIndexes y agregar newLandlord a invitedLandlords en lugar de landlordsAddresses
     function replaceLandlord(address previousLandlord, address newLandlord) public { 
         require(msg.sender == previousLandlord, "Only the landlord to be replaced can call this function");
 
-        landlordsAddresses[landlordsIndexes[previousLandlord] - 1] = newLandlord;
-        landlordsIndexes[newLandlord] = landlordsIndexes[previousLandlord];
-        landlordsIndexes[previousLandlord] = 0;
+        // move each landlord from the previousLandlord to the last one, one step back.
+        for (uint i = landlordsIndexes[previousLandlord] - 1; i < landlordsAddresses.length - 2; i++) {
+                landlordsIndexes[landlordsAddresses[i+1]] -= 1;
+                landlordsAddresses[i] = landlordsAddresses[i + 1];
+            }
+        // remove last landlord
+        landlordsIndexes[landlordsAddresses[landlordsAddresses.length - 1]] = 0 ;
+        delete landlordsAddresses[landlordsAddresses.length - 1];
+
+        numberOfLandlords--;
+
+        invitedLandlords[previousLandlord] = false;
+        invitedLandlords[previousLandlord] = true;
     }
 
-    // TODO: agregar funcion que retorna depósito inicial si landLord ya no está en landlordsIndexes
+
+    function getDeposit() isInvited external payable  { 
+        require(landlordsIndexes[msg.sender] == 0, "Only unregistered landlords can call this function");
+        require(0 < landlordsDeposits[msg.sender], "You must have deposited money");
+        invitedLandlords[msg.sender] = false;
+
+        // TODO : agregar pay function 
+
+        landlordsDeposits[msg.sender] = 0;
+    }
 
     function payNextMonthExpenses() isRegistered external payable  { 
         
@@ -120,7 +149,14 @@ contract Consorcio {
     
     }
 
-    // TODO: agregar `payDepositDebt()`
+    function payDepositDebt() isRegistered external payable  { 
+        require(landlordsDeposits[msg.sender] < initialDeposit, "You must have a debt");
+        require(0 < msg.value, "You must pay a positive amount of money");
+        require(msg.value <= initialDeposit - landlordsDeposits[msg.sender], "You must pay at most your debt");
+
+        landlordsDeposits[msg.sender] = msg.value;
+    
+    }
 
     function addDays(uint256 timestamp, uint256 _days) public pure returns (uint256 newTimestamp) {}
     function getMonth(uint256 timestamp) internal pure returns (uint256 month) {}
@@ -154,9 +190,7 @@ contract Consorcio {
         return nextMonthExpenses.value;
     }
 
-
-    // TODO: agregar requiere (no tenga deudas en landlordsDeposits)
-    function createProposal(string memory description, uint costPerPerson, uint timeout) public isRegistered {
+    function createProposal(string memory description, uint costPerPerson, uint timeout) public isRegistered hasNoDebt {
         require(bytes(description).length != 0 && costPerPerson != 0 && timeout != 0, "All parameters must be not null");
         require(block.timestamp < timeout);
 
@@ -213,8 +247,7 @@ contract Consorcio {
         }
     }
 
-    // TODO: agregar requiere (no tenga deudas en landlordsDeposits)
-    function vote(uint proposalId, bool decision) public isRegistered {
+    function vote(uint proposalId, bool decision) public isRegistered hasNoDebt {
         // require proposalId is a key in proposals
         require(proposalId > 0 && proposals[proposalId].id == proposalId, "Proposal does not exist");
 
