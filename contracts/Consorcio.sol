@@ -309,7 +309,7 @@ contract Consorcio {
     // para cada propueta con prioridad mayor que pueda ser cumplida,
     // - emite un evento
     // - ACCEPTED -> FULFILLED
-    // para las demas, que no puedan ser cumplidas:
+    // para las demas, no son ACCEPTED o DECLINED (no se llegó un acuerdo antes de su fecha limite), las cambia por EXPIRED
     // - emite un evento
     // - ACCEPTED -> EXPIRED
     
