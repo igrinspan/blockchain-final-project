@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: unlicensed
 
 import "./PriorityQueue.sol";
+import "./DateTime.sol";
 
 pragma solidity >=0.8.0 <0.9.0;
 
@@ -74,7 +75,7 @@ contract Consorcio {
         _;
     }
 
-    modifier hasNoDebt(uint proposalId) {
+    modifier hasNoDebt {
         require(landlordsDeposits[msg.sender] == initialDeposit, "You must pay your deposit debt");
         _;
     }
@@ -141,7 +142,7 @@ contract Consorcio {
 
     function payNextMonthExpenses() isRegistered external payable  { 
         
-        require((getMonth(block.timestamp) + 1) % 12 == nextMonthExpenses.month, "You must pay next month's expenses");
+        require((DateTime.getMonth(block.timestamp) + 1) % 12 == nextMonthExpenses.month, "You must pay next month's expenses");
         require(msg.value == nextMonthExpenses.value, "You must pay the correct amount of money for next month's expenses");
         require(nextMonthExpenses.landlordHasPaid[msg.sender] == false);
 
@@ -158,21 +159,12 @@ contract Consorcio {
     
     }
 
-    function addDays(uint256 timestamp, uint256 _days) public pure returns (uint256 newTimestamp) {}
-    function getMonth(uint256 timestamp) internal pure returns (uint256 month) {}
-
-    function timestampToDateTime(uint256 timestamp)
-        public
-        pure
-        returns (uint256 year, uint256 month, uint256 day, uint256 hour, uint256 minute, uint256 second)
-    {}
-
-    function calculateNextMonthExpenses() isRegistered external view returns(uint256){
+    function calculateNextMonthExpenses() isRegistered external returns(uint256){
         // Cuando se llame la funcion, tiene que ser el ultimo dia del mes.
-        (, , uint256 nextDay, , , ) = timestampToDateTime(addDays(block.timestamp, 1));
+        (, , uint256 nextDay, , , ) = DateTime.timestampToDateTime(DateTime.addDays(block.timestamp, 1));
         require(nextDay == 1);
         // La primera vez que se llame a la funcion en un mes particular, se debera calcular cuanto debe pagar cada uno el siguiente mes.
-        uint nextMonth = getMonth(block.timestamp) + 1;
+        uint nextMonth = DateTime.getMonth(block.timestamp) + 1;
         if (nextMonthExpenses.month < nextMonth){
             uint[] memory nextMonthProposalsIDs = acceptedProposals.getNextMonthProposalsIDs(nextMonth);
             uint totalCostPerPerson = 0;

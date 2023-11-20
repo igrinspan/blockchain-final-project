@@ -1,5 +1,7 @@
 // SPDX-License-Identifier: unlicensed
 
+import "./DateTime.sol";
+
 pragma solidity >=0.8.0 <0.9.0;
 
 contract PriorityQueue {
@@ -79,17 +81,12 @@ contract PriorityQueue {
     return head;
   }
 
-  function getMonth(uint256 timestamp) internal pure returns (uint256 month) {
-    }
-
-
-
-  function getNextMonthProposalsIDs(uint nextMonth) private view returns(uint[] memory){
+  function getNextMonthProposalsIDs(uint nextMonth) public view returns(uint[] memory){
       uint currentNodeId = head;
       uint numberOfNextMonthProposalsIDs = 0;
       while(currentNodeId != 0){
         Node storage tempNode = nodes[currentNodeId];
-        if (nextMonth < getMonth(tempNode.timeout)){
+        if (nextMonth < DateTime.getMonth(tempNode.timeout)){
             // Insert logic here
             break;
         }
