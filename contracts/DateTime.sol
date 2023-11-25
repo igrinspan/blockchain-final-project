@@ -31,12 +31,12 @@ library DateTime {
     uint256 constant DOW_SUN = 7;
 
 
-    function addDays(uint256 timestamp, uint256 _days) public pure returns (uint256 newTimestamp) {
+    function addDays(uint256 timestamp, uint256 _days) internal pure returns (uint256 newTimestamp) {
         newTimestamp = timestamp + _days * SECONDS_PER_DAY;
         require(newTimestamp >= timestamp);
     }
 
-    function getMonth(uint256 timestamp) public pure returns (uint256 month) {
+    function getMonth(uint256 timestamp) internal pure returns (uint256 month) {
         (, month,) = _daysToDate(timestamp / SECONDS_PER_DAY);
     }
 
@@ -68,7 +68,7 @@ library DateTime {
     }
 
     function timestampToDateTime(uint256 timestamp)
-        public
+        internal
         pure
         returns (uint256 year, uint256 month, uint256 day, uint256 hour, uint256 minute, uint256 second)
     {
@@ -80,6 +80,61 @@ library DateTime {
             minute = secs / SECONDS_PER_MINUTE;
             second = secs % SECONDS_PER_MINUTE;
         }
+    }
+
+
+    function _daysFromDate(uint year, uint month, uint day) internal pure returns (uint _days) {
+        require(year >= 1970);
+        int _year = int(year);
+        int _month = int(month);
+        int _day = int(day);
+
+        int __days = _day
+          - 32075
+          + 1461 * (_year + 4800 + (_month - 14) / 12) / 4
+          + 367 * (_month - 2 - (_month - 14) / 12 * 12) / 12
+          - 3 * ((_year + 4900 + (_month - 14) / 12) / 100) / 4
+          - OFFSET19700101;
+
+        _days = uint(__days);
+    }
+
+    function timestampFromDateTime(uint day, uint month, uint year) internal pure returns (uint timestamp) {
+        timestamp = _daysFromDate(year, month, day) * SECONDS_PER_DAY + 0 * SECONDS_PER_HOUR + 0 * SECONDS_PER_MINUTE + 0;
+    }
+
+    function getDaysInMonth(uint timestamp) internal pure returns (uint daysInMonth) {
+        (uint year, uint month,) = _daysToDate(timestamp / SECONDS_PER_DAY);
+        daysInMonth = _getDaysInMonth(year, month);
+    }
+
+    function _getDaysInMonth(uint year, uint month) internal pure returns (uint daysInMonth) {
+        if (month == 1 || month == 3 || month == 5 || month == 7 || month == 8 || month == 10 || month == 12) {
+            daysInMonth = 31;
+        } else if (month != 2) {
+            daysInMonth = 30;
+        } else {
+            daysInMonth = _isLeapYear(year) ? 29 : 28;
+        }
+    }
+
+    function isLeapYear(uint timestamp) internal pure returns (bool leapYear) {
+        (uint year,,) = _daysToDate(timestamp / SECONDS_PER_DAY);
+        leapYear = _isLeapYear(year);
+    }
+    
+    function _isLeapYear(uint year) internal pure returns (bool leapYear) {
+        leapYear = ((year % 4 == 0) && (year % 100 != 0)) || (year % 400 == 0);
+    }
+
+    function isFutureDate(uint day, uint month, uint year) internal view returns (bool){
+        // See if date is valid and after current date
+        require(month > 0 && month <= 12);
+        require(getDaysInMonth(timestampFromDateTime(day, month, year)) >= day && day > 0);
+
+        (uint256 currentYear, uint256 currentMonth, , , ,) = timestampToDateTime(block.timestamp);
+
+        return (year > currentYear || (year == currentYear && month > currentMonth));
     }
 
 }

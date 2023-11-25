@@ -18,7 +18,7 @@ contract PriorityQueue {
   }
 
   event EntryAdded(uint head, uint id, uint timeout);
-  event EntryRemover(uint head, uint id);
+  event EntryRemoved(uint head, uint id);
 
   function findPreviousAndCurrent(uint _id, uint _timeout) private view returns(uint, uint){
     uint currentNodeId = head;
@@ -69,7 +69,7 @@ contract PriorityQueue {
 
     // remove tempNodeId from nnodes
     length = length-1;
-    emit EntryRemover(head, _id);
+    emit EntryRemoved(head, _id);
   }
 
   //needed for external contract access to struct
@@ -81,28 +81,39 @@ contract PriorityQueue {
     return head;
   }
 
-  function getNextMonthProposalsIDs(uint nextMonth) public view returns(uint[] memory){
+  function getMonthProposalsIDs(uint month) public view returns(uint[] memory){
       uint currentNodeId = head;
-      uint numberOfNextMonthProposalsIDs = 0;
+      uint numberOfMonthProposalsIDs = 0;
       while(currentNodeId != 0){
         Node storage tempNode = nodes[currentNodeId];
-        if (nextMonth < DateTime.getMonth(tempNode.timeout)){
+        if (month < DateTime.getMonth(tempNode.timeout)){
             // Insert logic here
             break;
         }
-        numberOfNextMonthProposalsIDs++;
+        numberOfMonthProposalsIDs++;
         currentNodeId = nodes[currentNodeId].next; 
       }
 
       currentNodeId = head;
-      uint[] memory proposalsIDs = new uint[](numberOfNextMonthProposalsIDs);
+      uint[] memory proposalsIDs = new uint[](numberOfMonthProposalsIDs);
 
-      for (uint i = 0; i < numberOfNextMonthProposalsIDs; i++){
+      for (uint i = 0; i < numberOfMonthProposalsIDs; i++){
         proposalsIDs[i] = currentNodeId;
         currentNodeId = nodes[currentNodeId].next; 
       }
 
       return proposalsIDs; 
+  }
+
+  function getNodeInPosition(uint position) external view returns(Node memory){
+    require(position < length, "Position is out of bounds");
+
+    // Iterate throug the mapping nodes until we get to the "position" node
+    uint currentNodeId = head;
+    for(uint i = 0; i < position; i++){
+      currentNodeId = nodes[currentNodeId].next; 
+    }
+    return nodes[currentNodeId];
   }
 
 

@@ -1,0 +1,3 @@
+testLimit: 100000
+shrinkLimit: 10000
+testMode: assertion

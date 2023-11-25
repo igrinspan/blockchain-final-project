@@ -7,14 +7,20 @@ const { loadFixture } = require("@nomicfoundation/hardhat-toolbox/network-helper
 
 describe("PriorityQueue Contract", function () {
 
-  // We define a fixture to reuse the same setup in every test.
-  async function deployTokenFixture() {
-    const priorityQueue = await ethers.deployContract("PriorityQueue");
-    await priorityQueue.waitForDeployment();
 
-    // Fixtures can return anything you consider useful for your tests
+  // We define a fixture to reuse the same setup in every test: Deploying the priorityQueue contract, which uses DateTime library.
+  const deployTokenFixture = async () => {
+
+    // Deploy library DateTime and get the address of deployment.
+    const dateTime = await ethers.deployContract("DateTime");
+    await dateTime.waitForDeployment();
+
+    const PriorityQueue = await ethers.getContractFactory("PriorityQueue");
+    const priorityQueue = await PriorityQueue.deploy();
+    await priorityQueue.waitForDeployment();
     return { priorityQueue };
-  }
+  };
+  
 
   // ADD ENTRY
   describe("addEntry", function () {
@@ -117,12 +123,45 @@ describe("PriorityQueue Contract", function () {
 
   });
 
+  // GET NODE IN POSITION
+  describe("getNodeInPosition", function () {
+    it("0 -> should return head", async function () {
+      const { priorityQueue } = await loadFixture(deployTokenFixture);
+      
+      await priorityQueue.addEntry(1, 10);
+
+      let { nextId, id, timeout } = await priorityQueue.getNodeInPosition(0);
+
+      expect(await id).to.equal(1);
+    });
+
+    it("1 -> should return next node", async function () {
+      const { priorityQueue } = await loadFixture(deployTokenFixture);
+      
+      await priorityQueue.addEntry(1, 10);
+      await priorityQueue.addEntry(2, 20);
+
+      let { n, id, t } = await priorityQueue.getNodeInPosition(1);
+
+      expect(await id).to.equal(2);
+    });
+
+    it("should return 0 if position is greater than size", async function () {
+      const { priorityQueue } = await loadFixture(deployTokenFixture);
+      
+      await priorityQueue.addEntry(1, 10);
+
+      await expect(priorityQueue.getNodeInPosition(1)).to.be.revertedWith("Position is out of bounds");
+    });
+  });
+
+
   const getNextAndTimeout = async (priorityQueue, nodeId) => {
     const res = (await priorityQueue.getEntry(nodeId)).values();
     const nextNode = Number(res.next().value);
     const timeout = Number(res.next().value);
     return { nextNode, timeout };
-  }
+  };
   
   describe("test integrador", function () {
 
