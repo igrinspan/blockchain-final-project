@@ -43,6 +43,10 @@ contract ConsorcioTest is Consorcio(5, 120) {
         assert(true);
     }
 
+    function numberOfParticipantsIsAlwaysPositiveAndLessThanMax() public view{
+        assert(numberOfLandlords >= 0 && numberOfLandlords <= totalNumberOfLandlords);
+    }
+
     function getPositiveAndNegativeVotes(uint proposalId) internal view returns(uint, uint) {
         uint positiveVotes = 0;
         uint negativeVotes = 0;

@@ -36,8 +36,16 @@ library DateTime {
         require(newTimestamp >= timestamp);
     }
 
+    function getDay(uint timestamp) internal pure returns (uint day) {
+        (,,day) = _daysToDate(timestamp / SECONDS_PER_DAY);
+    }
+
     function getMonth(uint256 timestamp) internal pure returns (uint256 month) {
         (, month,) = _daysToDate(timestamp / SECONDS_PER_DAY);
+    }
+
+    function getYear(uint timestamp) internal pure returns (uint year) {
+        (year,,) = _daysToDate(timestamp / SECONDS_PER_DAY);
     }
 
     // ------------------------------------------------------------------------
@@ -79,6 +87,19 @@ library DateTime {
             secs = secs % SECONDS_PER_HOUR;
             minute = secs / SECONDS_PER_MINUTE;
             second = secs % SECONDS_PER_MINUTE;
+        }
+    }
+
+    function nextMonthAndYear(uint256 timestamp) internal pure returns (uint256 month, uint256 year) {
+        unchecked {
+            (uint256 _year, uint256 _month,) = _daysToDate(timestamp / SECONDS_PER_DAY);
+            if (_month == 12) {
+                month = 1;
+                year = _year + 1;
+            } else {
+                month = _month + 1;
+                year = _year;
+            }
         }
     }
 
