@@ -4,6 +4,9 @@ const { ethers } = require("hardhat");
 // We use `loadFixture` to share common setups (or fixtures) between tests.
 const { loadFixture } = require("@nomicfoundation/hardhat-toolbox/network-helpers");
 
+const JUL_01_2024_00_00_05_TIMESTAMP = 1719792005;
+const SEP_01_2024_00_00_00_TIMESTAMP = 1725159600;
+const JUL_01_2025_00_00_05_TIMESTAMP = 1751338805;
 
 describe("PriorityQueue Contract", function () {
 
@@ -78,7 +81,7 @@ describe("PriorityQueue Contract", function () {
 
   // REMOVE ENTRY
   describe("removeEntry", function () {
-      it("Should decrement size by 1", async function () {
+      it("Should decrement size by 1 when only one node", async function () {
         const { priorityQueue } = await loadFixture(deployTokenFixture);
         
         await priorityQueue.addEntry(1, 10);
@@ -88,6 +91,19 @@ describe("PriorityQueue Contract", function () {
         expect(previousLength).to.equal(1);
         expect(await priorityQueue.length()).to.equal(0);
       });
+
+      it("should decrement size by 1 when multiple nodes", async function(){
+        const { priorityQueue } = await loadFixture(deployTokenFixture);
+        
+        await priorityQueue.addEntry(11, 10);
+        await priorityQueue.addEntry(23, 25)
+        const previousLength = await priorityQueue.length();
+        await priorityQueue.removeEntry(11);
+
+        expect(previousLength).to.equal(2);
+        expect(await priorityQueue.length()).to.equal(1);
+        expect(await priorityQueue.head()).to.equal(23)
+      })
 
       it("Should do nothing if queue is empty", async function () {
         const { priorityQueue } = await loadFixture(deployTokenFixture);
@@ -155,6 +171,64 @@ describe("PriorityQueue Contract", function () {
     });
   });
 
+  // getMonthProposalsIDs
+  describe("getMonthProposalsIDs", function () {
+    it("should return empty array if queue is empty", async function () {
+      const { priorityQueue } = await loadFixture(deployTokenFixture);
+
+      expect(await priorityQueue.getMonthProposalsIDs(8, 2024)).to.be.empty;
+    });
+
+    it("should return empty array if queue is not empty but no node has the same month", async function () {
+      const { priorityQueue } = await loadFixture(deployTokenFixture);
+
+      await priorityQueue.addEntry(1, SEP_01_2024_00_00_00_TIMESTAMP);
+
+      expect(await priorityQueue.getMonthProposalsIDs(8, 2024)).to.be.empty;
+    });
+
+    it("should return array with node id if queue is not empty and node has the same month", async function () {
+      const { priorityQueue } = await loadFixture(deployTokenFixture);
+
+      await priorityQueue.addEntry(1, JUL_01_2024_00_00_05_TIMESTAMP);
+
+      let res = await priorityQueue.getMonthProposalsIDs(7, 2024);
+
+      expect(res).to.have.lengthOf(1);
+      expect(res[0]).to.equal(1);
+    });
+
+    it("should return only from this year when queue has nodes from same month and different years", async function () {
+      const { priorityQueue } = await loadFixture(deployTokenFixture);
+
+      await priorityQueue.addEntry(1, JUL_01_2024_00_00_05_TIMESTAMP);
+      await priorityQueue.addEntry(2, JUL_01_2025_00_00_05_TIMESTAMP);
+
+      let res = await priorityQueue.getMonthProposalsIDs(7, 2024);
+
+      expect(res).to.have.lengthOf(1);
+      expect(res[0]).to.equal(1);
+    });
+
+    it("should work properly witj multiple proposals", async function(){
+      const { priorityQueue } = await loadFixture(deployTokenFixture);
+
+      await priorityQueue.addEntry(15, 1721001600);
+      await priorityQueue.addEntry(23, 1723248000);
+
+      let res7 = await priorityQueue.getMonthProposalsIDs(7, 2024);
+      
+      expect(res7).to.have.lengthOf(1);
+      expect(res7[0]).to.equal(15);
+      
+      await priorityQueue.removeEntry(15);
+      
+      let res8 = await priorityQueue.getMonthProposalsIDs(8, 2024);
+      expect(res8).to.have.lengthOf(1);
+      expect(res8[0]).to.equal(23);
+    })
+
+  });
 
   const getNextAndTimeout = async (priorityQueue, nodeId) => {
     const res = (await priorityQueue.getEntry(nodeId)).values();

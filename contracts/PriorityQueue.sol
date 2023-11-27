@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: unlicensed
 
 import "./DateTime.sol";
+import "hardhat/console.sol";
 
 pragma solidity >=0.8.0 <0.9.0;
 
@@ -81,16 +82,22 @@ contract PriorityQueue {
     return head;
   }
 
-  function getMonthProposalsIDs(uint month) public view returns(uint[] memory){
+  function getMonthProposalsIDs(uint month, uint year) public view returns(uint[] memory){
       uint currentNodeId = head;
       uint numberOfMonthProposalsIDs = 0;
+
       while(currentNodeId != 0){
+        // Vamos recorriendo los nodos
         Node storage tempNode = nodes[currentNodeId];
-        if (month < DateTime.getMonth(tempNode.timeout)){
-            // Insert logic here
-            break;
+        uint proposalMonth = DateTime.getMonth(tempNode.timeout);
+        uint proposalYear = DateTime.getYear(tempNode.timeout);
+
+        // See this month and year proposal ids and increment the numberOfMonthProposalIDs counter.
+        if (proposalMonth == month && proposalYear == year){
+          numberOfMonthProposalsIDs++;
+        } else if (year < proposalYear || (year == proposalYear && month < proposalMonth)){
+          break; // Si nos pasamos, cortamos.
         }
-        numberOfMonthProposalsIDs++;
         currentNodeId = nodes[currentNodeId].next; 
       }
 
