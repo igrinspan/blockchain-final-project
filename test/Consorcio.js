@@ -544,7 +544,7 @@ describe("Consorcio Contract", function () {
             // Set ethereum timestamp to the last day of the month
             await ethers.provider.send("evm_setNextBlockTimestamp", [JUL_01_2024_00_00_00_TIMESTAMP]);
 
-            await expect(consorcio.connect(addr1).payNextMonthExpenses()).to.be.revertedWith("You must pay next month's expenses");
+            await expect(consorcio.connect(addr1).payNextMonthExpenses()).to.be.revertedWith("You can only calculate next month's expenses the last day of the month");
         });
 
         it("Should fail if landlord has already paid next month's expenses", async function () {
@@ -653,37 +653,24 @@ describe("Consorcio Contract", function () {
             await register(consorcio, addr2);
             await register(consorcio, addr3);
 
-            // JULIO 2024
-            await consorcio.connect(addr1).createProposal(VALID_PROPOSAL_DESCRIPTION, 50, 15, 7, 2024);
+            // AGOSTO 2024
+            await consorcio.connect(addr1).createProposal(VALID_PROPOSAL_DESCRIPTION, 120, 10, 8, 2024);
             await consorcio.connect(addr1).vote(1, true);
             await consorcio.connect(addr2).vote(1, true);
-
-            await ethers.provider.send("evm_setNextBlockTimestamp", [JUN_30_2024_23_59_50_TIMESTAMP]);
-            await consorcio.connect(addr1).calculateNextMonthExpenses();
-
-            await consorcio.connect(addr1).payNextMonthExpenses({ value: 50 });
-            await consorcio.connect(addr2).payNextMonthExpenses({ value: 50 });
-            await ethers.provider.send("evm_setNextBlockTimestamp", [JUL_01_2024_00_00_00_TIMESTAMP]);
-            await consorcio.tryToFulfillAllProposals();
-
-            // AGOSTO 2024
-            await consorcio.connect(addr1).createProposal(VALID_PROPOSAL_DESCRIPTION, 70, 10, 8, 2024);
-            await consorcio.connect(addr1).vote(2, true);
-            await consorcio.connect(addr2).vote(2, true);
 
             await ethers.provider.send("evm_setNextBlockTimestamp", [JUL_31_2024_23_59_50_TIMESTAMP]);
             await consorcio.connect(addr1).calculateNextMonthExpenses();
 
-            await consorcio.connect(addr1).payNextMonthExpenses({ value: 70 });
-            await consorcio.connect(addr2).payNextMonthExpenses({ value: 70 });
+            await consorcio.connect(addr1).payNextMonthExpenses({ value: 120 });
+            await consorcio.connect(addr2).payNextMonthExpenses({ value: 120 });
 
             await ethers.provider.send("evm_setNextBlockTimestamp", [AUG_01_2024_00_00_00_TIMESTAMP]);
             await consorcio.tryToFulfillAllProposals();
             
             // SEPTIEMBRE 2024 (addr3 ya se quedo sin deposit)
             await consorcio.connect(addr1).createProposal(VALID_PROPOSAL_DESCRIPTION, 10, 17, 9, 2024);
-            await consorcio.connect(addr1).vote(3, true);
-            await consorcio.connect(addr2).vote(3, true);
+            await consorcio.connect(addr1).vote(2, true);
+            await consorcio.connect(addr2).vote(2, true);
 
             await ethers.provider.send("evm_setNextBlockTimestamp", [AUG_31_2024_23_59_50_TIMESTAMP]);
             await consorcio.connect(addr1).calculateNextMonthExpenses();
@@ -696,8 +683,8 @@ describe("Consorcio Contract", function () {
 
             // // OCTUBRE 2024 (addr1 y addr2 habían puesto 10 que no se usaron)
             await consorcio.connect(addr1).createProposal(VALID_PROPOSAL_DESCRIPTION, 15, 25, 10, 2024);
-            await consorcio.connect(addr1).vote(4, true);
-            await consorcio.connect(addr2).vote(4, true);
+            await consorcio.connect(addr1).vote(3, true);
+            await consorcio.connect(addr2).vote(3, true);
 
             await ethers.provider.send("evm_setNextBlockTimestamp", [SEP_31_2924_23_59_50_TIMESTAMP]);
             await consorcio.connect(addr1).calculateNextMonthExpenses();
