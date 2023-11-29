@@ -464,7 +464,7 @@ describe("Consorcio Contract", function () {
             expect(value).to.equal(0);
         });
 
-        it("should return 50 if there is one approved proposal with costPerPerson 50", async function () {
+        it("Should return 50 if there is one approved proposal with costPerPerson 50", async function () {
             const { consorcio, participants } = await loadFixture(deployConsorcioWith3ParticipantsAndReturn4Signers);
             const [deployer, addr1, addr2, addr3] = participants;
             
@@ -486,7 +486,7 @@ describe("Consorcio Contract", function () {
             expect(value).to.equal(50);
         });
 
-        it("should work correctly when there are multiple proposals", async function () {
+        it("Should work correctly when there are multiple proposals", async function () {
             const { consorcio, participants } = await loadFixture(deployConsorcioWith3ParticipantsAndReturn4Signers);
             const [deployer, addr1, addr2, addr3] = participants;
             
@@ -738,6 +738,19 @@ describe("Consorcio Contract", function () {
             await consorcio.connect(addr2).replaceLandlord(addr2.address, addr3.address);
 
             await expect(consorcio.connect(addr2).getDepositAndExtraBalance()).to.be.revertedWith("Landlord has no deposit to claim");
+        });
+
+        it("Should return deposit correctly", async function(){
+            const { consorcio, participants } = await loadFixture(deployConsorcioWith3ParticipantsAndReturn4Signers);
+            const [, addr1, addr2, addr3] = participants;
+
+            await register(consorcio, addr1);
+            await register(consorcio, addr2);  
+            
+            await consorcio.connect(addr2).replaceLandlord(addr2.address, addr3.address);
+
+            await expect(consorcio.connect(addr2).getDepositAndExtraBalance()).to.changeEtherBalance(addr2, 120);
+            await expect(consorcio.connect(addr2).getDepositAndExtraBalance()).to.be.revertedWith("Only invited landlords can call this function");
         });
     });
 

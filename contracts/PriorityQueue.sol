@@ -1,7 +1,6 @@
 // SPDX-License-Identifier: unlicensed
 
 import "./DateTime.sol";
-import "hardhat/console.sol";
 
 pragma solidity >=0.8.0 <0.9.0;
 

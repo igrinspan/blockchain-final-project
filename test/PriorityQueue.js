@@ -92,7 +92,7 @@ describe("PriorityQueue Contract", function () {
         expect(await priorityQueue.length()).to.equal(0);
       });
 
-      it("should decrement size by 1 when multiple nodes", async function(){
+      it("Should decrement size by 1 when multiple nodes", async function(){
         const { priorityQueue } = await loadFixture(deployTokenFixture);
         
         await priorityQueue.addEntry(11, 10);
@@ -141,7 +141,7 @@ describe("PriorityQueue Contract", function () {
 
   // GET NODE IN POSITION
   describe("getNodeInPosition", function () {
-    it("0 -> should return head", async function () {
+    it("0 -> Should return head", async function () {
       const { priorityQueue } = await loadFixture(deployTokenFixture);
       
       await priorityQueue.addEntry(1, 10);
@@ -151,7 +151,7 @@ describe("PriorityQueue Contract", function () {
       expect(await id).to.equal(1);
     });
 
-    it("1 -> should return next node", async function () {
+    it("1 -> Should return next node", async function () {
       const { priorityQueue } = await loadFixture(deployTokenFixture);
       
       await priorityQueue.addEntry(1, 10);
@@ -162,7 +162,7 @@ describe("PriorityQueue Contract", function () {
       expect(await id).to.equal(2);
     });
 
-    it("should return 0 if position is greater than size", async function () {
+    it("Should return 0 if position is greater than size", async function () {
       const { priorityQueue } = await loadFixture(deployTokenFixture);
       
       await priorityQueue.addEntry(1, 10);
@@ -173,13 +173,13 @@ describe("PriorityQueue Contract", function () {
 
   // getMonthProposalsIDs
   describe("getMonthProposalsIDs", function () {
-    it("should return empty array if queue is empty", async function () {
+    it("Should return empty array if queue is empty", async function () {
       const { priorityQueue } = await loadFixture(deployTokenFixture);
 
       expect(await priorityQueue.getMonthProposalsIDs(8, 2024)).to.be.empty;
     });
 
-    it("should return empty array if queue is not empty but no node has the same month", async function () {
+    it("Should return empty array if queue is not empty but no node has the same month", async function () {
       const { priorityQueue } = await loadFixture(deployTokenFixture);
 
       await priorityQueue.addEntry(1, SEP_01_2024_00_00_00_TIMESTAMP);
@@ -187,7 +187,7 @@ describe("PriorityQueue Contract", function () {
       expect(await priorityQueue.getMonthProposalsIDs(8, 2024)).to.be.empty;
     });
 
-    it("should return array with node id if queue is not empty and node has the same month", async function () {
+    it("Should return array with node id if queue is not empty and node has the same month", async function () {
       const { priorityQueue } = await loadFixture(deployTokenFixture);
 
       await priorityQueue.addEntry(1, JUL_01_2024_00_00_05_TIMESTAMP);
@@ -198,7 +198,7 @@ describe("PriorityQueue Contract", function () {
       expect(res[0]).to.equal(1);
     });
 
-    it("should return only from this year when queue has nodes from same month and different years", async function () {
+    it("Should return only from this year when queue has nodes from same month and different years", async function () {
       const { priorityQueue } = await loadFixture(deployTokenFixture);
 
       await priorityQueue.addEntry(1, JUL_01_2024_00_00_05_TIMESTAMP);
@@ -210,7 +210,7 @@ describe("PriorityQueue Contract", function () {
       expect(res[0]).to.equal(1);
     });
 
-    it("should work properly witj multiple proposals", async function(){
+    it("Should work properly witj multiple proposals", async function(){
       const { priorityQueue } = await loadFixture(deployTokenFixture);
 
       await priorityQueue.addEntry(15, 1721001600);
@@ -239,7 +239,7 @@ describe("PriorityQueue Contract", function () {
   
   describe("test integrador", function () {
 
-    it("should pass obviamente", async function () {    
+    it("Should pass", async function () {    
 
       let nextNode1, nextNode2, nextNode3, nextNode4;
       let timeout1, timeout2, timeout3, timeout4;

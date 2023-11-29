@@ -106,9 +106,11 @@ contract Consorcio {
 
 
     function getDepositAndExtraBalance() isInvited external { 
+        // Check
         require(landlordsIndexes[msg.sender] == 0, "Landlord is still registered");
         require(0 < landlordsDeposits[msg.sender], "Landlord has no deposit to claim");
         
+        // Effects
         invitedLandlords[msg.sender] = false;
         uint balanceToTransfer = landlordsDeposits[msg.sender];
         balanceToTransfer += landlordsBalances[msg.sender];
@@ -116,6 +118,7 @@ contract Consorcio {
         landlordsDeposits[msg.sender] = 0;
         landlordsBalances[msg.sender] = 0;
 
+        // Interaction
         payable(msg.sender).transfer(balanceToTransfer);
     }
 
@@ -144,16 +147,10 @@ contract Consorcio {
         uint nextDay = DateTime.getDay(DateTime.addDays(block.timestamp, 1));
         require(nextDay == 1, "You can only calculate next month's expenses the last day of the month");
         
-        uint nextMonth = DateTime.getMonth(block.timestamp) + 1;
-        uint year = DateTime.getYear(block.timestamp);
-
-        if (nextMonth > 12) { // Si estamos en diciembre, calculamos para enero del siguiente año
-            nextMonth = 1;
-            year = year + 1;
-        }
+        (uint nextMonth, uint year) = DateTime.getNextMonthAndYear();
 
         if (nextMonthExpenses.month == nextMonth && nextMonthExpenses.year == year){
-            return; // Porque ya se calculó el valor para el mes siguiente
+            return; // expenses already calculated for next month
         }
 
         uint[] memory nextMonthProposalsIDs = acceptedProposals.getMonthProposalsIDs(nextMonth, year);
@@ -167,19 +164,23 @@ contract Consorcio {
             nextMonthExpenses.landlordHasPaid[landlordsAddresses[i]] = false;
         }
 
-        nextMonthExpenses.month = nextMonth;
+        updateNextMonthExpenses(nextMonth, year, totalCostPerPerson);
+    }
+
+    function updateNextMonthExpenses(uint month, uint year, uint totalCostPerPerson) internal {
+        nextMonthExpenses.month = month;
         nextMonthExpenses.year = year;
         nextMonthExpenses.value = totalCostPerPerson;
         nextMonthExpenses.fulfilledProposals = false;
     }
 
-    function myNextMonthExpenses() public view returns(uint256){
-        require(0 < landlordsIndexes[tx.origin], "Only registered landlords can call this function");
-        if (landlordsBalances[tx.origin] > nextMonthExpenses.value){
-            return 0;
-        } else {
-            return nextMonthExpenses.value - landlordsBalances[tx.origin];
-        }
+    function myNextMonthExpenses() public view returns(uint256) {
+        require(landlordsIndexes[tx.origin] > 0, "Only registered landlords can call this function");
+
+        uint256 balance = landlordsBalances[tx.origin];
+        uint256 expenses = nextMonthExpenses.value;
+
+        return (balance > expenses) ? 0 : (expenses - balance);
     }
 
 
@@ -191,7 +192,6 @@ contract Consorcio {
 
         uint timeout = DateTime.timestampFromDateTime(day, month, year);
 
-        // Hacemos que el timeout que manda el usuario sea en cuánto tiempo vence la propuesta o exactamente la fecha/hora en la que vence la propuesta?
         constructProposal(nextProposalId, msg.sender, description, costPerPerson, block.timestamp, timeout);
         nextProposalId = nextProposalId + 1;
     }
@@ -268,7 +268,7 @@ contract Consorcio {
         Proposal storage proposal = proposals[proposalId];
         proposal.votes[addr] = decision ? VotesState.POSITIVE : VotesState.NEGATIVE;
 
-        if (decision){ // TODO: reportar error gracias a fuzzing
+        if (decision){ // TODO: report error thanks to fuzzing
             proposal.positiveVotes++;
             proposal.negativeVotes--;
         }else{
@@ -293,15 +293,15 @@ contract Consorcio {
         }
     }
 
-    // el primero de cada mes se llama a la funcion que intenta cumplir todas las propuestas de este mes que empieza.
+    // the first day of each month, the function that tries to fulfill all the proposals of this month is called
     function tryToFulfillAllProposals() public {
         require(DateTime.getDay(block.timestamp) == 1, "You can only try to fulfill all proposals the first day of the month");
         require(nextMonthExpenses.fulfilledProposals == false, "You can only try to fulfill all proposals once per month");
 
-        // Check which landlord hasn't paid.
+        // check which landlord hasn't paid.
         for (uint i = 0; i < landlordsAddresses.length; i++){
             if (nextMonthExpenses.landlordHasPaid[landlordsAddresses[i]] == false){
-                // Notify to the others (emit event) and discount the debt from the deposit.
+                // notify to the others (emit event) and discount the debt from the deposit
                 emit LandlordHasNotPaid(landlordsAddresses[i], nextMonthExpenses.month, nextMonthExpenses.year, nextMonthExpenses.value);
 
                 if (landlordsDeposits[landlordsAddresses[i]] >= nextMonthExpenses.value){
@@ -311,7 +311,7 @@ contract Consorcio {
             }
         }
 
-        // Para cada propuesta del mes, ver en que estado esta
+        // for each proposal of this month, try to fulfill it
         uint[] memory currentMonthProposalIDs = acceptedProposals.getMonthProposalsIDs(DateTime.getMonth(block.timestamp), DateTime.getYear(block.timestamp));
         bool fulfilled = true;
         for (uint i = 0; i < currentMonthProposalIDs.length; i++){
@@ -327,7 +327,7 @@ contract Consorcio {
 
     function tryToFulfillProposal(Proposal storage proposal) internal returns(bool){
         uint lastLandlordThatPaid;
-        // Chequear si tenemos suficiente balance para cumplir la propuesta recorriendo los balances de los landlords
+        // check if we have enough balance to fulfill the proposal by iterating over the landlords balances
         for(uint i = 0; i < landlordsAddresses.length; i++){
             if (landlordsBalances[landlordsAddresses[i]] < proposal.costPerPerson){
                 emit NotEnoughBalanceToFulfill(proposal.id);
@@ -352,11 +352,11 @@ contract Consorcio {
     }
 
     // --- View functions ---
-     function getVote(uint proposalID, address landlord) isRegistered2(landlord) exists(proposalID) public view returns(bool){ 
+     function getVote(uint proposalID, address landlord) isRegisteredTest(landlord) exists(proposalID) public view returns(bool){ 
          return proposals[proposalID].votes[landlord] == VotesState.POSITIVE;
      }
  
-     function hasPaidNextMonthExpenses(address landlord) isRegistered2(landlord) public view returns(bool){
+     function hasPaidNextMonthExpenses(address landlord) isRegisteredTest(landlord) public view returns(bool){
          return nextMonthExpenses.landlordHasPaid[landlord];
      }
     // -----------------
@@ -372,7 +372,7 @@ contract Consorcio {
         _;
     }
 
-    modifier isRegistered2(address landlord){
+    modifier isRegisteredTest(address landlord){
         require(0 < landlordsIndexes[landlord], "Landlord is not registered");
         _;
     }
@@ -385,12 +385,6 @@ contract Consorcio {
     modifier hasCREATEDState(uint proposalId) {
         require(proposals[proposalId].id == proposalId, "Proposal does not exist");
         require(proposals[proposalId].state == ProposalState.CREATED, "Proposal must be in CREATED state");
-        _;
-    }
-
-    modifier hasDECLINEDState(uint proposalId) {
-        require(proposals[proposalId].id == proposalId, "Proposal does not exist");
-        require(proposals[proposalId].state == ProposalState.DECLINED, "Proposal must be in DECLINED state");
         _;
     }
 

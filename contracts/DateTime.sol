@@ -158,4 +158,14 @@ library DateTime {
         return (year > currentYear || (year == currentYear && month > currentMonth));
     }
 
+    function getNextMonthAndYear() internal view returns(uint, uint) {
+        uint nextMonth = DateTime.getMonth(block.timestamp) + 1;
+        uint year = DateTime.getYear(block.timestamp);
+        if (nextMonth > 12) {
+            nextMonth = 1;
+            year++;
+        }
+        return (nextMonth, year);
+    }
+
 }
